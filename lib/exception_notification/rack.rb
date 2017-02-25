@@ -7,6 +7,7 @@ module ExceptionNotification
 
       ExceptionNotifier.ignored_exceptions = options.delete(:ignore_exceptions) if options.key?(:ignore_exceptions)
       ExceptionNotifier.grouping_error = options.delete(:grouping_error) if options.key?(:grouping_error)
+      ExceptionNotifier.grouping_error_period = options.delete(:grouping_error_period) if options.key?(:grouping_error_period)
       ExceptionNotifier.send_grouped_error_trigger = options.delete(:send_grouped_error_trigger) if options.key?(:send_grouped_error_trigger)
 
       if options.key?(:ignore_if)

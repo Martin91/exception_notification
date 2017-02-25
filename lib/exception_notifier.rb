@@ -29,6 +29,9 @@ module ExceptionNotifier
   mattr_accessor :grouping_error
   @@grouping_error = false
 
+  mattr_accessor :grouping_error_period
+  @@grouping_error_period = 5.minutes
+
   mattr_accessor :send_grouped_error_trigger
 
   mattr_accessor :testing_mode
@@ -133,13 +136,13 @@ module ExceptionNotifier
       accumulated_errors_count = 1
       if count = Rails.cache.read(message_based_key)
         accumulated_errors_count = count + 1
-        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: 5.minutes)
+        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: grouping_error_period)
       elsif count = Rails.cache.read(backtrace_based_key)
         accumulated_errors_count = count + 1
-        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: 5.minutes)
+        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: grouping_error_period)
       else    # new error group
-        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: 5.minutes)
-        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: 5.minutes)
+        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: grouping_error_period)
+        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: grouping_error_period)
       end
 
       options[:accumulated_errors_count] = accumulated_errors_count
