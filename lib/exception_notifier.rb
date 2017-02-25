@@ -26,6 +26,11 @@ module ExceptionNotifier
   mattr_accessor :ignored_exceptions
   @@ignored_exceptions = %w{ActiveRecord::RecordNotFound Mongoid::Errors::DocumentNotFound AbstractController::ActionNotFound ActionController::RoutingError ActionController::UnknownFormat ActionController::UrlGenerationError}
 
+  mattr_accessor :grouping_error
+  @@grouping_error = false
+
+  mattr_accessor :send_grouped_error_trigger
+
   mattr_accessor :testing_mode
   @@testing_mode = false
 
@@ -43,7 +48,7 @@ module ExceptionNotifier
     def notify_exception(exception, options={})
       return false if ignored_exception?(options[:ignore_exceptions], exception)
       return false if ignored?(exception, options)
-      return false if skip_notification_for_grouping_error?(exception, options)
+      return false if grouping_error && skip_notification_for_grouping_error?(exception, options)
 
       selected_notifiers = options.delete(:notifiers) || notifiers
       [*selected_notifiers].each do |notifier|
@@ -138,7 +143,11 @@ module ExceptionNotifier
       end
 
       options[:accumulated_errors_count] = accumulated_errors_count
-      !send_notification?(accumulated_errors_count)
+      if send_grouped_error_trigger.respond_to?(:call)
+        send_grouped_error_trigger.call(accumulated_errors_count)
+      else
+        !send_notification?(accumulated_errors_count)
+      end
     end
 
     def send_notification?(count)

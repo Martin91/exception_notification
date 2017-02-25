@@ -10,6 +10,8 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   teardown do
+    ExceptionNotifier.grouping_error = false
+    ExceptionNotifier.send_grouped_error_trigger = nil
     ExceptionNotifier.class_eval("@@notifiers.delete_if { |k, _| k.to_s != \"email\"}")  # reset notifiers
     Rails.cache.clear
   end
@@ -32,8 +34,6 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should allow register/unregister another notifier" do
-    ExceptionNotifier.stubs(:skip_notification_for_grouping_error?).returns(false)
-
     called = false
     proc_notifier = lambda { |exception, options| called = true }
     ExceptionNotifier.register_exception_notifier(:proc, proc_notifier)
@@ -50,8 +50,6 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should allow select notifiers to send error to" do
-    ExceptionNotifier.stubs(:skip_notification_for_grouping_error?).returns(false)
-
     notifier1_calls = 0
     notifier1 = lambda { |exception, options| notifier1_calls += 1 }
     ExceptionNotifier.register_exception_notifier(:notifier1, notifier1)
@@ -81,8 +79,6 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should ignore exception if satisfies conditional ignore" do
-    ExceptionNotifier.stubs(:skip_notification_for_grouping_error?).returns(false)
-
     env = "production"
     ExceptionNotifier.ignore_if do |exception, options|
       env != "production"
@@ -103,8 +99,6 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should not send notification if one of ignored exceptions" do
-    ExceptionNotifier.stubs(:skip_notification_for_grouping_error?).returns(false)
-
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = StandardError.new
@@ -117,6 +111,7 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should grouping errors if same exception and backtrace" do
+    ExceptionNotifier.grouping_error = true
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = Proc.new do |i|
@@ -132,7 +127,26 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
     assert_equal 7, @notifier_calls
   end
 
+  test "should use custom send_grouped_error_trigger if same exception and backtrace and specified it" do
+    ExceptionNotifier.grouping_error = true
+    ExceptionNotifier.send_grouped_error_trigger = lambda { |count| count % 2 == 0 }
+    ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
+
+    exception = Proc.new do |i|
+      e = ExceptionOne.new("error#{i}")
+      e.stubs(:backtrace).returns(["/file/path:1"])
+      e
+    end
+
+    20.times { |i| ExceptionNotifier.notify_exception(exception.call(i), {:notifiers => :test}) }
+
+    key = Zlib.crc32("ExceptionOne\npath:/file/path:1")
+    assert_equal 20, Rails.cache.read("exception:#{key}")
+    assert_equal 10, @notifier_calls
+  end
+
   test "should grouping errors if same exception and message" do
+    ExceptionNotifier.grouping_error = true
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = Proc.new do |i|
@@ -149,6 +163,7 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should not group errors if different exception" do
+    ExceptionNotifier.grouping_error = true
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception_one = ExceptionOne.new
@@ -167,6 +182,7 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
   end
 
   test "should not group errors if same exception with different backtrace and message" do
+    ExceptionNotifier.grouping_error = true
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = Proc.new do |i|
