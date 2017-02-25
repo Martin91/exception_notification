@@ -816,6 +816,26 @@ Rails.application.config.middleware.use ExceptionNotification::Rack,
   }
 ```
 
+## Grouping Error
+In general, exception notification will send every notification when an error occured, which may result in a problem: if your site has a high throughput and an same error raised frequently, you will receive too many notifications during a short period time, your mail box may be full of thousands of exception mails or even your mail server will be slow. To prevent this, you can choose to group error by using `:grouping_error` option and set it to `true`.
+
+Grouping error has a default formula to determine if it is needed to send the notification based on the accumulated errors count for specified exception, this makes the notifier only send notification when count is: 1, 3, 6, 9, 10, 100, 1000, ... 10**n. You can use `:send_grouped_error_trigger` to override this default formula.
+
+The below shows options used to configure grouping error:
+
+```ruby
+Rails.application.config.middleware.use ExceptionNotification::Rack,
+  :ignore_exceptions => ['ActionView::TemplateError'] + ExceptionNotifier.ignored_exceptions,
+  :email => {
+    :email_prefix         => "[PREFIX] ",
+    :sender_address       => %{"notifier" <notifier@example.com>},
+    :exception_recipients => %w{exceptions@example.com}
+  },
+  :grouping_error => true,
+  :send_grouped_error_trigger => lambda { |count| count % 10 == 0 },      # count: accumulated errors count
+  :grouping_error_period => 5.minutes                                     # the time before an error is regarded as fixed
+```
+
 ## Ignore Exceptions
 
 You can choose to ignore certain exceptions, which will make ExceptionNotification avoid sending notifications for those specified. There are three ways of specifying which exceptions to ignore:
