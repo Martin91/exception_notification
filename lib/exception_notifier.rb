@@ -43,6 +43,8 @@ module ExceptionNotifier
     def notify_exception(exception, options={})
       return false if ignored_exception?(options[:ignore_exceptions], exception)
       return false if ignored?(exception, options)
+      return false if skip_notification_for_grouping_error?(exception, options)
+
       selected_notifiers = options.delete(:notifiers) || notifiers
       [*selected_notifiers].each do |notifier|
         fire_notification(notifier, exception, options.dup)
@@ -117,6 +119,34 @@ module ExceptionNotifier
       register_exception_notifier(name, notifier)
     rescue NameError => e
       raise UndefinedNotifierError, "No notifier named '#{name}' was found. Please, revise your configuration options. Cause: #{e.message}"
+    end
+
+    def skip_notification_for_grouping_error?(exception, options)
+      backtrace_based_key = "exception:#{Zlib.crc32("#{exception.class.name}\npath:#{exception.backtrace.try(:first)}")}"
+      message_based_key = "exception:#{Zlib.crc32("#{exception.class.name}\nmessage:#{exception.message}")}"
+
+      accumulated_errors_count = 1
+      if count = Rails.cache.read(message_based_key)
+        accumulated_errors_count = count + 1
+        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: 5.minutes)
+      elsif count = Rails.cache.read(backtrace_based_key)
+        accumulated_errors_count = count + 1
+        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: 5.minutes)
+      else    # new error group
+        Rails.cache.write(backtrace_based_key, accumulated_errors_count, expires_in: 5.minutes)
+        Rails.cache.write(message_based_key, accumulated_errors_count, expires_in: 5.minutes)
+      end
+
+      options[:accumulated_errors_count] = accumulated_errors_count
+      !send_notification?(accumulated_errors_count)
+    end
+
+    def send_notification?(count)
+      # send notification when count is: 1, 3, 6, 9, 10, 100, 1000, ... 10**n
+      return true if count == 1
+
+      factor = count < 10 ? count.to_f / 3 : Math.log10(count)
+      factor.to_i == factor       # true when factor is a integer
     end
   end
 end
