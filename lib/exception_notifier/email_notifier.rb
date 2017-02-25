@@ -60,6 +60,7 @@ module ExceptionNotifier
 
           def compose_subject
             subject = "#{@options[:email_prefix]}"
+            subject << "(#{@options[:accumulated_errors_count]} times) " if @options[:accumulated_errors_count].to_i > 1
             subject << "#{@kontroller.controller_name}##{@kontroller.action_name}" if @kontroller && @options[:include_controller_and_action_names_in_subject]
             subject << " (#{@exception.class})"
             subject << " #{@exception.message.inspect}" if @options[:verbose_subject]

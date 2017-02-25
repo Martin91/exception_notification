@@ -129,7 +129,7 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
 
   test "should use custom send_grouped_error_trigger if same exception and backtrace and specified it" do
     ExceptionNotifier.grouping_error = true
-    ExceptionNotifier.send_grouped_error_trigger = lambda { |count| count % 2 == 0 }
+    ExceptionNotifier.send_grouped_error_trigger = lambda { |count| count % 3 == 0 }
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = Proc.new do |i|
@@ -142,7 +142,7 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
 
     key = Zlib.crc32("ExceptionOne\npath:/file/path:1")
     assert_equal 20, Rails.cache.read("exception:#{key}")
-    assert_equal 10, @notifier_calls
+    assert_equal 6, @notifier_calls
   end
 
   test "should grouping errors if same exception and message" do
