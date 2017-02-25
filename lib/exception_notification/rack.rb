@@ -6,6 +6,8 @@ module ExceptionNotification
       @app = app
 
       ExceptionNotifier.ignored_exceptions = options.delete(:ignore_exceptions) if options.key?(:ignore_exceptions)
+      ExceptionNotifier.grouping_error = options.delete(:grouping_error) if options.key?(:grouping_error)
+      ExceptionNotifier.send_grouped_error_trigger = options.delete(:send_grouped_error_trigger) if options.key?(:send_grouped_error_trigger)
 
       if options.key?(:ignore_if)
         rack_ignore = options.delete(:ignore_if)
