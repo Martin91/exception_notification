@@ -147,7 +147,7 @@ module ExceptionNotifier
 
       options[:accumulated_errors_count] = accumulated_errors_count
       if send_grouped_error_trigger.respond_to?(:call)
-        !send_grouped_error_trigger.call(accumulated_errors_count)
+        !send_grouped_error_trigger.call(exception, accumulated_errors_count)
       else
         !send_notification?(accumulated_errors_count)
       end

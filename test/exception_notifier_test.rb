@@ -129,7 +129,14 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
 
   test "should use custom send_grouped_error_trigger if same exception and backtrace and specified it" do
     ExceptionNotifier.grouping_error = true
-    ExceptionNotifier.send_grouped_error_trigger = lambda { |count| count % 3 == 0 }
+    ExceptionNotifier.send_grouped_error_trigger = Proc.new do |exception, count|
+      if exception.is_a?(ExceptionOne)
+        count % 3 == 0
+      else
+        count % 4 == 0
+      end
+    end
+
     ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = Proc.new do |i|

@@ -832,8 +832,14 @@ Rails.application.config.middleware.use ExceptionNotification::Rack,
     :exception_recipients => %w{exceptions@example.com}
   },
   :grouping_error => true,
-  :send_grouped_error_trigger => lambda { |count| count % 10 == 0 },      # count: accumulated errors count
-  :grouping_error_period => 5.minutes                                     # the time before an error is regarded as fixed
+  :grouping_error_period => 5.minutes,    # the time before an error is regarded as fixed
+  #
+  # send_grouped_error_trigger: the option used to specify a callback to determine when a notification should be sent,
+  #   the callback will be called with two arguments:
+  #     exception: the exception raised
+  #     count: accumulated errors count for this exception
+  #
+  :send_grouped_error_trigger => lambda { |exception, count| count % 10 == 0 }
 ```
 
 ## Ignore Exceptions
