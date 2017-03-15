@@ -16,6 +16,22 @@ class IrcNotifierTest < ActiveSupport::TestCase
     irc.call(fake_exception)
   end
 
+  test "should exclude errors count in message if :accumulated_errors_count nil" do
+    irc = ExceptionNotifier::IrcNotifier.new({})
+    irc.stubs(:active?).returns(true)
+
+    irc.expects(:send_message).with{ |message| message.include?("divided by 0") }.once
+    irc.call(fake_exception)
+  end
+
+  test "should include errors count in message if :accumulated_errors_count is 3" do
+    irc = ExceptionNotifier::IrcNotifier.new({})
+    irc.stubs(:active?).returns(true)
+
+    irc.expects(:send_message).with{ |message| message.include?("(3 times)'divided by 0'") }.once
+    irc.call(fake_exception, accumulated_errors_count: 3)
+  end
+
   test "should call pre/post_callback if specified" do
     pre_callback_called, post_callback_called = 0,0
 

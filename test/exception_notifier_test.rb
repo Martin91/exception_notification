@@ -1,6 +1,21 @@
 require 'test_helper'
 
+class ExceptionOne < StandardError;end
+class ExceptionTwo < StandardError;end
+
 class ExceptionNotifierTest < ActiveSupport::TestCase
+  setup do
+    @notifier_calls = 0
+    @test_notifier = lambda { |exception, options| @notifier_calls += 1 }
+  end
+
+  teardown do
+    ExceptionNotifier.error_grouping = false
+    ExceptionNotifier.notification_trigger = nil
+    ExceptionNotifier.class_eval("@@notifiers.delete_if { |k, _| k.to_s != \"email\"}")  # reset notifiers
+    Rails.cache.clear
+  end
+
   test "should have default ignored exceptions" do
     assert_equal ExceptionNotifier.ignored_exceptions,
       ['ActiveRecord::RecordNotFound', 'Mongoid::Errors::DocumentNotFound', 'AbstractController::ActionNotFound',
@@ -69,37 +84,67 @@ class ExceptionNotifierTest < ActiveSupport::TestCase
       env != "production"
     end
 
-    notifier_calls = 0
-    test_notifier = lambda { |exception, options| notifier_calls += 1 }
-    ExceptionNotifier.register_exception_notifier(:test, test_notifier)
+    ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = StandardError.new
 
     ExceptionNotifier.notify_exception(exception, {:notifiers => :test})
-    assert_equal notifier_calls, 1
+    assert_equal @notifier_calls, 1
 
     env = "development"
     ExceptionNotifier.notify_exception(exception, {:notifiers => :test})
-    assert_equal notifier_calls, 1
+    assert_equal @notifier_calls, 1
 
     ExceptionNotifier.clear_ignore_conditions!
-    ExceptionNotifier.unregister_exception_notifier(:test)
   end
 
   test "should not send notification if one of ignored exceptions" do
-    notifier_calls = 0
-    test_notifier = lambda { |exception, options| notifier_calls += 1 }
-    ExceptionNotifier.register_exception_notifier(:test, test_notifier)
+    ExceptionNotifier.register_exception_notifier(:test, @test_notifier)
 
     exception = StandardError.new
 
     ExceptionNotifier.notify_exception(exception, {:notifiers => :test})
-    assert_equal notifier_calls, 1
+    assert_equal @notifier_calls, 1
 
     ExceptionNotifier.notify_exception(exception, {:notifiers => :test, :ignore_exceptions => 'StandardError' })
-    assert_equal notifier_calls, 1
-
-    ExceptionNotifier.unregister_exception_notifier(:test)
+    assert_equal @notifier_calls, 1
   end
 
+  test "should not call group_error! or send_notification? if error_grouping false" do
+    exception = StandardError.new
+    ExceptionNotifier.expects(:group_error!).never
+    ExceptionNotifier.expects(:send_notification?).never
+
+    ExceptionNotifier.notify_exception(exception)
+  end
+
+  test "should call group_error! and send_notification? if error_grouping true" do
+    ExceptionNotifier.error_grouping = true
+
+    exception = StandardError.new
+    ExceptionNotifier.expects(:group_error!).once
+    ExceptionNotifier.expects(:send_notification?).once
+
+    ExceptionNotifier.notify_exception(exception)
+  end
+
+  test "should skip notification if send_notification? is false" do
+    ExceptionNotifier.error_grouping = true
+
+    exception = StandardError.new
+    ExceptionNotifier.expects(:group_error!).once.returns(1)
+    ExceptionNotifier.expects(:send_notification?).with(exception, 1).once.returns(false)
+
+    refute ExceptionNotifier.notify_exception(exception)
+  end
+
+  test "should send notification if send_notification? is true" do
+    ExceptionNotifier.error_grouping = true
+
+    exception = StandardError.new
+    ExceptionNotifier.expects(:group_error!).once.returns(1)
+    ExceptionNotifier.expects(:send_notification?).with(exception, 1).once.returns(true)
+
+    assert ExceptionNotifier.notify_exception(exception)
+  end
 end

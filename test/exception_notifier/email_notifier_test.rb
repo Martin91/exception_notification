@@ -218,4 +218,18 @@ class EmailNotifierTest < ActiveSupport::TestCase
     mail = email_notifier.call(@exception)
     assert_equal %w{second@example.com}, mail.to
   end
+
+  test "should prepend accumulated_errors_count in email subject if accumulated_errors_count larger than 1" do
+    ActionMailer::Base.deliveries.clear
+
+    email_notifier = ExceptionNotifier::EmailNotifier.new(
+      :email_prefix => '[Dummy ERROR] ',
+      :sender_address => %{"Dummy Notifier" <dummynotifier@example.com>},
+      :exception_recipients => %w{dummyexceptions@example.com},
+      :delivery_method => :test
+    )
+
+    mail = email_notifier.call(@exception, { accumulated_errors_count: 3 })
+    assert mail.subject.start_with?("[Dummy ERROR] (3 times) (ZeroDivisionError)")
+  end
 end

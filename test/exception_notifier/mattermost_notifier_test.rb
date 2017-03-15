@@ -77,6 +77,23 @@ class MattermostNotifierTest < ActiveSupport::TestCase
     assert 'password', options[:basic_auth][:password]
   end
 
+  test "should use 'An' for exceptions count if :accumulated_errors_count option is nil" do
+    mattermost_notifier = ExceptionNotifier::MattermostNotifier.new
+    exception = ArgumentError.new("foo")
+    mattermost_notifier.instance_variable_set(:@exception, exception)
+    mattermost_notifier.instance_variable_set(:@options, {})
+
+    assert_includes mattermost_notifier.send(:message_header), "An *ArgumentError* occured."
+  end
+
+  test "shoud use direct errors count if :accumulated_errors_count option is 5" do
+    mattermost_notifier = ExceptionNotifier::MattermostNotifier.new
+    exception = ArgumentError.new("foo")
+    mattermost_notifier.instance_variable_set(:@exception, exception)
+    mattermost_notifier.instance_variable_set(:@options, { accumulated_errors_count: 5 })
+
+    assert_includes mattermost_notifier.send(:message_header), "5 *ArgumentError* occured."
+  end
 end
 
 class FakeHTTParty

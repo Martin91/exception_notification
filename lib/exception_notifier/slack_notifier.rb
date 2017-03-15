@@ -20,7 +20,9 @@ module ExceptionNotifier
     end
 
     def call(exception, options={})
-      exception_name = "*#{exception.class.to_s =~ /^[aeiou]/i ? 'An' : 'A'}* `#{exception.class.to_s}`"
+      errors_count = options[:accumulated_errors_count].to_i
+      measure_word = errors_count > 1 ? errors_count : (exception.class.to_s =~ /^[aeiou]/i ? 'An' : 'A')
+      exception_name = "*#{measure_word}* `#{exception.class.to_s}`"
 
       if options[:env].nil?
         data = options[:data] || {}

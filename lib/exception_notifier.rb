@@ -2,8 +2,10 @@ require 'logger'
 require 'active_support/core_ext/string/inflections'
 require 'active_support/core_ext/module/attribute_accessors'
 require 'exception_notifier/base_notifier'
+require 'exception_notifier/modules/error_grouping'
 
 module ExceptionNotifier
+  include ErrorGrouping
 
   autoload :BacktraceCleaner, 'exception_notifier/modules/backtrace_cleaner'
 
@@ -43,6 +45,11 @@ module ExceptionNotifier
     def notify_exception(exception, options={})
       return false if ignored_exception?(options[:ignore_exceptions], exception)
       return false if ignored?(exception, options)
+      if error_grouping
+        errors_count = group_error!(exception, options)
+        return false unless send_notification?(exception, errors_count)
+      end
+
       selected_notifiers = options.delete(:notifiers) || notifiers
       [*selected_notifiers].each do |notifier|
         fire_notification(notifier, exception, options.dup)

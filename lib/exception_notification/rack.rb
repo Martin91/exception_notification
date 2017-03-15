@@ -6,6 +6,15 @@ module ExceptionNotification
       @app = app
 
       ExceptionNotifier.ignored_exceptions = options.delete(:ignore_exceptions) if options.key?(:ignore_exceptions)
+      ExceptionNotifier.error_grouping = options.delete(:error_grouping) if options.key?(:error_grouping)
+      ExceptionNotifier.error_grouping_period = options.delete(:error_grouping_period) if options.key?(:error_grouping_period)
+      ExceptionNotifier.notification_trigger = options.delete(:notification_trigger) if options.key?(:notification_trigger)
+
+      if options.key?(:error_grouping_cache)
+        ExceptionNotifier.error_grouping_cache = options.delete(:error_grouping_cache)
+      elsif defined?(Rails)
+        ExceptionNotifier.error_grouping_cache = Rails.cache
+      end
 
       if options.key?(:ignore_if)
         rack_ignore = options.delete(:ignore_if)

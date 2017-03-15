@@ -52,6 +52,20 @@ class CampfireNotifierTest < ActiveSupport::TestCase
     assert_nil campfire.call(fake_exception)
   end
 
+  test "should send the new exception message if no :accumulated_errors_count option" do
+    campfire = ExceptionNotifier::CampfireNotifier.new({})
+    campfire.stubs(:active?).returns(true)
+    campfire.expects(:send_notice).with{ |_, _, message| message.start_with?("A new exception occurred") }.once
+    campfire.call(fake_exception)
+  end
+
+  test "shoud send the exception message if :accumulated_errors_count option greater than 1" do
+    campfire = ExceptionNotifier::CampfireNotifier.new({})
+    campfire.stubs(:active?).returns(true)
+    campfire.expects(:send_notice).with{ |_, _, message| message.start_with?("The exception occurred 3 times:") }.once
+    campfire.call(fake_exception, accumulated_errors_count: 3)
+  end
+
   test "should call pre/post_callback if specified" do 
     pre_callback_called, post_callback_called = 0,0
     Tinder::Campfire.stubs(:new).returns(Object.new)

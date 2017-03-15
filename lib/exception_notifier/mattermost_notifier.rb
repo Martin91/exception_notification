@@ -91,8 +91,9 @@ module ExceptionNotifier
       def message_header
         text = []
 
+        errors_count = @options[:accumulated_errors_count].to_i
         text << "### :warning: Error 500 in #{Rails.env} :warning:"
-        text << "An *#{@exception.class}* occured" + if @controller then " in *#{controller_and_method}*." else "." end
+        text << "#{errors_count > 1 ? errors_count : 'An'} *#{@exception.class}* occured" + if @controller then " in *#{controller_and_method}*." else "." end
         text << "*#{@exception.message}*"
 
         text

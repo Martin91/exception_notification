@@ -816,6 +816,33 @@ Rails.application.config.middleware.use ExceptionNotification::Rack,
   }
 ```
 
+## Error Grouping
+In general, exception notification will send every notification when an error occured, which may result in a problem: if your site has a high throughput and an same error raised frequently, you will receive too many notifications during a short period time, your mail box may be full of thousands of exception mails or even your mail server will be slow. To prevent this, you can choose to error errors by using `:error_grouping` option and set it to `true`.
+
+Error grouping has a default formula `log2(errors_count)` to determine if it is needed to send the notification based on the accumulated errors count for specified exception, this makes the notifier only send notification when count is: 1, 2, 4, 8, 16, 32, 64, 128, ... (2**n). You can use `:notification_trigger` to override this default formula.
+
+The below shows options used to enable error grouping:
+
+```ruby
+Rails.application.config.middleware.use ExceptionNotification::Rack,
+  :ignore_exceptions => ['ActionView::TemplateError'] + ExceptionNotifier.ignored_exceptions,
+  :email => {
+    :email_prefix         => "[PREFIX] ",
+    :sender_address       => %{"notifier" <notifier@example.com>},
+    :exception_recipients => %w{exceptions@example.com}
+  },
+  :error_grouping => true,
+  # :error_grouping_period => 5.minutes,    # the time before an error is regarded as fixed
+  # :error_grouping_cache => Rails.cache,   # for other applications such as Sinatra, use one instance of ActiveSupport::Cache::Store
+  #
+  # notification_trigger: specify a callback to determine when a notification should be sent,
+  #   the callback will be invoked with two arguments:
+  #     exception: the exception raised
+  #     count: accumulated errors count for this exception
+  #
+  # :notification_trigger => lambda { |exception, count| count % 10 == 0 }
+```
+
 ## Ignore Exceptions
 
 You can choose to ignore certain exceptions, which will make ExceptionNotification avoid sending notifications for those specified. There are three ways of specifying which exceptions to ignore:

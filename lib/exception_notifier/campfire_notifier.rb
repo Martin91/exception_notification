@@ -19,7 +19,11 @@ module ExceptionNotifier
 
     def call(exception, options={})
       if active?
-        message = "A new exception occurred: '#{exception.message}'"
+        message = if options[:accumulated_errors_count].to_i > 1
+          "The exception occurred #{options[:accumulated_errors_count]} times: '#{exception.message}'"
+        else
+          "A new exception occurred: '#{exception.message}'"
+        end
         message += " on '#{exception.backtrace.first}'" if exception.backtrace
         send_notice(exception, options, message) do |msg, _|
           @room.paste msg

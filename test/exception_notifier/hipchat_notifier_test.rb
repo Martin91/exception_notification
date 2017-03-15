@@ -101,13 +101,37 @@ class HipchatNotifierTest < ActiveSupport::TestCase
       :api_token => 'good_token',
       :room_name => 'room_name',
       :color     => 'yellow',
-      :message_template => ->(exception) { "This is custom message: '#{exception.message}'" }
+      :message_template => ->(exception, _) { "This is custom message: '#{exception.message}'" }
     }
 
     HipChat::Room.any_instance.expects(:send).with('Exception', "This is custom message: '#{fake_exception.message}'", { :color => 'yellow' })
 
     hipchat = ExceptionNotifier::HipchatNotifier.new(options)
     hipchat.call(fake_exception)
+  end
+
+  test "should send hipchat notification exclude accumulated errors count" do
+    options = {
+      :api_token => 'good_token',
+      :room_name => 'room_name',
+      :color     => 'yellow'
+    }
+
+    HipChat::Room.any_instance.expects(:send).with{ |_, msg, _| msg.start_with?("A new exception occurred:") }
+    hipchat = ExceptionNotifier::HipchatNotifier.new(options)
+    hipchat.call(fake_exception)
+  end
+
+  test "should send hipchat notification include accumulated errors count" do
+    options = {
+      :api_token => 'good_token',
+      :room_name => 'room_name',
+      :color     => 'yellow'
+    }
+
+    HipChat::Room.any_instance.expects(:send).with{ |_, msg, _| msg.start_with?("The exception occurred 3 times:") }
+    hipchat = ExceptionNotifier::HipchatNotifier.new(options)
+    hipchat.call(fake_exception, { accumulated_errors_count: 3 })
   end
 
   test "should send hipchat notification with HTML-escaped meessage if using default message_template" do
