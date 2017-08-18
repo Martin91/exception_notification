@@ -74,6 +74,22 @@ class SlackNotifierTest < ActiveSupport::TestCase
     slack_notifier.call(@exception)
   end
 
+  test "should send the notification with additional fields" do
+    field = {title: "Branch", value: "master", short: true}
+    options = {
+      webhook_url: "http://slack.webhook.url",
+      additional_fields: [field]
+    }
+
+    Slack::Notifier.any_instance.expects(:ping).with('', fake_notification(@exception, {}, nil, 10, [field]))
+
+    slack_notifier = ExceptionNotifier::SlackNotifier.new(options)
+    slack_notifier.call(@exception)
+
+    additional_fields = slack_notifier.notifier.config.defaults[:additional_fields]
+    assert_equal additional_fields, options[:additional_fields]
+  end
+
   test "should pass the additional parameters to Slack::Notifier.ping" do
     options = {
       webhook_url: "http://slack.webhook.url",
@@ -179,7 +195,7 @@ class SlackNotifierTest < ActiveSupport::TestCase
     ]
   end
 
-  def fake_notification(exception = @exception, notification_options = {}, data_string = nil, expected_backtrace_lines = nil)
+  def fake_notification(exception = @exception, notification_options = {}, data_string = nil, expected_backtrace_lines = 10, additional_fields = [])
     exception_name = "*#{exception.class.to_s =~ /^[aeiou]/i ? 'An' : 'A'}* `#{exception.class.to_s}`"
     if notification_options[:env].nil?
       text = "#{exception_name} *occured in background*"
@@ -198,10 +214,11 @@ class SlackNotifierTest < ActiveSupport::TestCase
     fields = [ { title: 'Exception', value: exception.message} ]
     fields.push({ title: 'Hostname', value: 'example.com' })
     if exception.backtrace
-      formatted_backtrace = expected_backtrace_lines ? "```#{exception.backtrace.first(expected_backtrace_lines).join("\n")}```" : "```#{exception.backtrace.join("\n")}```"
+      formatted_backtrace = "```#{exception.backtrace.first(expected_backtrace_lines).join("\n")}```"
       fields.push({ title: 'Backtrace', value: formatted_backtrace })
     end
     fields.push({ title: 'Data', value: "```#{data_string}```" }) if data_string
+    additional_fields.each { |f| fields.push(f) }
 
     { attachments: [ color: 'danger', text: text, fields: fields, mrkdwn_in: %w(text fields) ] }
   end

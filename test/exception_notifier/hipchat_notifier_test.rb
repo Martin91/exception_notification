@@ -175,6 +175,20 @@ class HipchatNotifierTest < ActiveSupport::TestCase
     hipchat.call(fake_exception)
   end
 
+  test "should allow server_url value (for a self-hosted HipChat Server) if set" do
+    options = {
+      :api_token   => 'good_token',
+      :room_name   => 'room_name',
+      :api_version => 'v2',
+      :server_url  => 'https://domain.com',
+    }
+
+    HipChat::Client.stubs(:new).with('good_token', {:api_version => 'v2', :server_url => 'https://domain.com'}).returns({})
+
+    hipchat = ExceptionNotifier::HipchatNotifier.new(options)
+    hipchat.call(fake_exception)
+  end
+
   private
 
   def fake_body

@@ -1,3 +1,10 @@
+== 4.2.2
+
+* enhancements
+  * Error groupiong (by @Martin91)
+  * Additional fields for Slack support (by @schurig)
+  * Enterprise HipChat support (by @seanhuber)
+
 == 4.2.1
 
 * enhancements

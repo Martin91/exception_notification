@@ -399,6 +399,12 @@ Color of the message. Default : 'red'.
 
 Message will appear from this nickname. Default : 'Exception'.
 
+##### server_url
+
+*String, optional*
+
+Custom Server URL for self-hosted, Enterprise HipChat Server
+
 For all options & possible values see [Hipchat API](https://www.hipchat.com/docs/api/method/rooms/message).
 
 ### IRC notifier
@@ -596,6 +602,12 @@ more information. Default: 'incoming-webhook'
 
 Contains additional payload for a message (e.g avatar, attachments, etc). See [slack-notifier](https://github.com/stevenosloan/slack-notifier#additional-parameters) for more information.. Default: '{}'
 
+##### additional_fields
+
+*Array of Hashes, optional*
+
+Contains additional fields that will be added to the attachement. See [Slack documentation](https://api.slack.com/docs/message-attachments).
+
 ## Mattermost notifier
 
 Post notification in a mattermost channel via [incoming webhook](http://docs.mattermost.com/developer/webhooks-incoming.html)
@@ -606,7 +618,7 @@ Just add the [HTTParty](https://github.com/jnunemaker/httparty) gem to your `Gem
 gem 'httparty'
 ```
 
-To configure it, you **need** to set the `webhook_url` option.  
+To configure it, you **need** to set the `webhook_url` option.
 You can also specify an other channel with `channel` option.
 
 ```ruby
@@ -622,7 +634,7 @@ Rails.application.config.middleware.use ExceptionNotification::Rack,
   }
 ```
 
-If you are using Github or Gitlab for issues tracking, you can specify `git_url` as follow to add a *Create issue* link in you notification.  
+If you are using Github or Gitlab for issues tracking, you can specify `git_url` as follow to add a *Create issue* link in you notification.
 By default this will use your Rails application name to match the git repository. If yours differ you can specify `app_name`.
 
 
